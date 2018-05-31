@@ -1,0 +1,26 @@
+spring:
+    profiles:
+        active: dev
+    application:
+         name: route-creator
+    jpa:
+      hibernate:
+        ddl-auto: none
+
+server:
+    servlet:
+          context-path: /route-creator
+
+---
+
+spring:
+    profiles: dev
+    datasource:
+        write:
+            jdbcUrl: jdbc:postgresql://localhost:5432/tripify
+            username: postgres
+            password: postgres
+            driver-class-name: org.postgresql.Driver
+
+server:
+    port: 8083
