@@ -1,10 +1,12 @@
 package ua.nure.tanasiuk.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ua.nure.tanasiuk.resource.serializer.UnixDateSerializer;
 
 import java.util.Date;
 
@@ -18,6 +20,7 @@ public class Ticket {
     private long originalId;
     private double cost;
     private int duration;
+    @JsonSerialize(using = UnixDateSerializer.class)
     private Date departureTime;
     private int transportTypeId;
     private int fromId;

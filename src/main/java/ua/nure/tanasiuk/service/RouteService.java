@@ -120,13 +120,12 @@ public class RouteService {
         Double costSum = allTickets.stream().mapToDouble(Ticket::getCost).sum();
         Integer durationSum = allTickets.stream().mapToInt(Ticket::getDuration).sum();
 
-        allTickets.forEach(t ->
-            t.setRate(
-                (1.0 - t.getCost() / costSum) * factor
-                + (1.0 - t.getDuration() / durationSum) * (1 - factor)
-                + (transportTypes.contains(t.getTransportTypeId()) ? 1 : 0)
-            )
-        );
+        allTickets.forEach(t -> {
+            double timeRate = (1.0 - (double)t.getDuration() / (double)durationSum) * (1.0 - factor);
+            double costRate = (1.0 - t.getCost() / costSum) * factor;
+            double transportRate = transportTypes.contains(t.getTransportTypeId()) ? 1 : 0;
+            t.setRate(costRate + timeRate + transportRate);
+        });
 
         return allTickets.stream().max(Comparator.comparing(Ticket::getRate)).get();
     }

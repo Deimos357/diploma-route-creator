@@ -1,10 +1,12 @@
 package ua.nure.tanasiuk.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import ua.nure.tanasiuk.model.Ticket;
+import ua.nure.tanasiuk.resource.deserializer.UnixDateDeserializer;
 
 import java.util.Date;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class RouteRequest {
+    @JsonDeserialize(using = UnixDateDeserializer.class)
     private Date startDate;
     private Integer startStation;
     private List<StationInRoute> stationsToVisit;
