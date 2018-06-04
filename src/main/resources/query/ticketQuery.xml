@@ -3,7 +3,9 @@
 <!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
 
 <properties>
-    <entry key=''>
-        // TODO
+    <entry key='getTicketsBeetwenStations'>
+        select *
+        from ticket
+        where from_id = :stationFrom and to_id = :stationTo and :dateTo >= departure_time and departure_time >= :dateFrom
     </entry>
 </properties>

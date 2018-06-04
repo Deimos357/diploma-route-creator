@@ -19,12 +19,12 @@ public class StationService {
     public double[][] getDistanceMatrix(List<Integer> cities) {
         double[][] result = new double[cities.size()][];
 
-        cities.forEach(c1 -> {
-            result[c1] = new double[cities.size()];
-            cities.forEach(c2 ->
-                result[c1][c2] = distanceMatrix[c1][c2]
-            );
-        });
+        for (int i = 0; i < cities.size(); i++) {
+            result[i] = new double[cities.size()];
+            for (int j = 0; j < cities.size(); j++) {
+                result[i][j] = distanceMatrix[cities.get(i) - 1][cities.get(j) - 1];
+            }
+        }
 
         return result;
     }

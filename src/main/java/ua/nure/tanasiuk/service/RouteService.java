@@ -7,15 +7,17 @@ import ua.nure.tanasiuk.dto.StationInRoute;
 import ua.nure.tanasiuk.model.Ticket;
 import ua.nure.tanasiuk.algorithm.AntColonyAlgorithm;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class RouteService {
+    private static final int MILLIS_IN_HOUR = 3600000;
+    private static final int MILLIS_IN_DAY =  MILLIS_IN_HOUR * 24;
+
+    private static final Ticket EMPTY_TICKET = Ticket.builder().id(-1).build();
+
     private final StationService stationService;
     private final TicketService ticketService;
     private final AntColonyAlgorithm antColonyAlgorithm;
@@ -48,16 +50,17 @@ public class RouteService {
 
             for (int i = 0; i < routeRequest.getTickets().size(); i++) {
                 currentDate.setTime(currentDate.getTime() + routeRequest.getTickets().get(i).getDuration()
-                    + routeRequest.getStationsToVisit().get(i + 1).getHours() * 3600000);
+                    + routeRequest.getStationsToVisit().get(i + 1).getHours() * MILLIS_IN_HOUR);
             }
             List<StationInRoute> leftStations = routeRequest.getStationsToVisit()
                 .subList(routeRequest.getTickets().size(), routeRequest.getStationsToVisit().size());
 
-            return getTickets(
+            routeRequest.getTickets().addAll(getTickets(
                 currentDate,
                 leftStations,
                 routeRequest.getTransportTypes(),
-                routeRequest.getFactor());
+                routeRequest.getFactor()));
+            return routeRequest.getTickets();
         }
     }
 
@@ -68,7 +71,7 @@ public class RouteService {
         allStations.add(startStation);
 
         int[] orderedStations = antColonyAlgorithm.makeRoute(stationService.getDistanceMatrix(allStations));
-        int startCityIndex =  Arrays.stream(orderedStations).boxed().collect(Collectors.toList()).indexOf(3);
+        int startCityIndex =  Arrays.stream(orderedStations).boxed().collect(Collectors.toList()).indexOf(allStations.size() - 1);
 
         int[] finalOrderedStations = shiftLeft(orderedStations, startCityIndex);
 
@@ -76,8 +79,9 @@ public class RouteService {
 
         result.add(new StationInRoute(startStation, 0));
         for (int i = 1; i < orderedStations.length; i++) {
-            int finalI = i;
-            result.add(stations.stream().filter(st -> st.getStationId() == finalOrderedStations[finalI]).findFirst().get());
+//            int finalI = i;
+//            result.add(stations.stream().filter(st -> st.getStationId() == finalOrderedStations[finalI]).findFirst().get());
+            result.add(stations.get(finalOrderedStations[i]));
         }
         result.add(new StationInRoute(startStation, 0));
 
@@ -100,15 +104,30 @@ public class RouteService {
         for (int i = 0; i < stations.size() - 1; i++) {
             Ticket ticket = getTicket(stations.get(i).getStationId(), stations.get(i + 1).getStationId(), currentDate, transportTypes, factor);
             tickets.add(ticket);
-            currentDate.setTime(currentDate.getTime() + ticket.getDuration() + stations.get(i + 1).getHours() * 3600000);
+            currentDate.setTime(currentDate.getTime() + ticket.getDuration() + stations.get(i + 1).getHours() * MILLIS_IN_HOUR);
         }
 
         return tickets;
     }
 
-    private Ticket getTicket(int stationFrom, int stationTo, Date date,
-                             List<Integer> transportTypes, Double factor) {
-        // TODO
-        return null;
+    private Ticket getTicket(int stationFrom, int stationTo, Date date, List<Integer> transportTypes, Double factor) {
+        List<Ticket> allTickets = ticketService.getTicketsBeetwenStations(stationFrom, stationTo, date, new Date(date.getTime() + MILLIS_IN_DAY));
+
+        if (allTickets.isEmpty()) {
+            return EMPTY_TICKET;
+        }
+
+        Double costSum = allTickets.stream().mapToDouble(Ticket::getCost).sum();
+        Integer durationSum = allTickets.stream().mapToInt(Ticket::getDuration).sum();
+
+        allTickets.forEach(t ->
+            t.setRate(
+                (1.0 - t.getCost() / costSum) * factor
+                + (1.0 - t.getDuration() / durationSum) * (1 - factor)
+                + (transportTypes.contains(t.getTransportTypeId()) ? 1 : 0)
+            )
+        );
+
+        return allTickets.stream().max(Comparator.comparing(Ticket::getRate)).get();
     }
 }

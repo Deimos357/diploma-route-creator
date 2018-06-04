@@ -1,5 +1,6 @@
 package ua.nure.tanasiuk.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,4 +24,7 @@ public class Ticket {
     private int toId;
     private int companyId;
     private boolean isAvailable;
+
+    @JsonIgnore
+    private double rate;
 }

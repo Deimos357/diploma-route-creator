@@ -3,7 +3,14 @@
 <!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
 
 <properties>
-    <entry key=''>
-        // TODO
+    <entry key='getDistanceMatrix'>
+        select '[' || array_to_string(array_agg(a.distance), ',') || ']' as dist
+        from (
+            select distance(st1.latitude, st1.longitude, st2.latitude, st2.longitude) as distance, st1.id as id1, st2.id as id2
+            from station as st1
+            inner join station as st2 on true
+        ) a
+        group by a.id1
+        order by a.id1
     </entry>
 </properties>
