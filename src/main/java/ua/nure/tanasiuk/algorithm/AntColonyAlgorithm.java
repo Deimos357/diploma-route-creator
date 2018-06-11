@@ -11,14 +11,19 @@ import java.util.Random;
 public class AntColonyAlgorithm {
     private Random random = new Random();
 
-    private int alpha = 3;
-    private int beta = 2;
+//    old
+//    private int alpha = 3;
+//    private int beta = 2;
+//    private double rho = 0.01;
+//    private double Q = 2.0;
 
-    private double rho = 0.01;
-    private double Q = 2.0;
+    private double alpha = 0.1;
+    private double beta = 2.0;
+    private double rho = 0.9;
+    private double Q = 1.0;
 
-    private int numAnts = 40;
-    private int maxTime = 1000;
+    private int numAnts = 10;
+    private int maxTime = 10000;
 
     public int[] makeRoute(double[][] distances) {
         int numCities = distances.length;

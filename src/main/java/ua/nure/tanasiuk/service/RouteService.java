@@ -104,7 +104,7 @@ public class RouteService {
         for (int i = 0; i < stations.size() - 1; i++) {
             Ticket ticket = getTicket(stations.get(i).getStationId(), stations.get(i + 1).getStationId(), currentDate, transportTypes, factor);
             tickets.add(ticket);
-            currentDate.setTime(currentDate.getTime() + ticket.getDuration() + stations.get(i + 1).getHours() * MILLIS_IN_HOUR);
+            currentDate.setTime(ticket.getDepartureTime().getTime() + ticket.getDuration() + stations.get(i + 1).getHours() * MILLIS_IN_HOUR);
         }
 
         return tickets;
