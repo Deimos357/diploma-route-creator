@@ -29,17 +29,45 @@ public class RouteService {
     }
 
     public List<Ticket> getRoute(RouteRequest routeRequest) {
-        return getTickets(
+        // debug
+        List<StationInRoute> gr = getStationOrderGreed(routeRequest.getStartStation(), routeRequest.getStationsToVisit());
+        List<Ticket> badTickets = getTicketsGreed(
             routeRequest.getStartDate(),
-            getStationOrder(routeRequest.getStartStation(), routeRequest.getStationsToVisit()),
+            gr,
             routeRequest.getTransportTypes(),
             routeRequest.getFactor()
         );
+
+        List<StationInRoute> ant = getStationOrderAnt(routeRequest.getStartStation(), routeRequest.getStationsToVisit());
+        List<Ticket> coolTickets = getTicketsGreed(
+            routeRequest.getStartDate(),
+            ant,
+            routeRequest.getTransportTypes(),
+            routeRequest.getFactor()
+        );
+
+        log.info("_____");
+        log.info("Size: " + routeRequest.getStationsToVisit().size());
+
+        log.info("Greed:");
+        log.info("Cost: " + badTickets.stream().map(Ticket::getCost).mapToDouble(Double::doubleValue).sum());
+        log.info("Duration: " + badTickets.stream().map(Ticket::getDuration).mapToInt(Integer::intValue).sum());
+        log.info(Arrays.toString(gr.stream().map(StationInRoute::getStationId).toArray()));
+        log.info(Arrays.toString(badTickets.stream().map(Ticket::getFromId).toArray()));
+
+        log.info("Ant: ");
+        log.info("Cost: " + coolTickets.stream().map(Ticket::getCost).mapToDouble(Double::doubleValue).sum());
+        log.info("Duration: " + coolTickets.stream().map(Ticket::getDuration).mapToInt(Integer::intValue).sum());
+        log.info(Arrays.toString(ant.stream().map(StationInRoute::getStationId).toArray()));
+        log.info(Arrays.toString(coolTickets.stream().map(Ticket::getFromId).toArray()));
+        log.info("_____");
+
+        return coolTickets;
     }
 
     public List<Ticket> editRoute(RouteRequest routeRequest) {
         if (routeRequest.getTickets() == null || routeRequest.getTickets().isEmpty()) {
-            return getTickets(
+            return getTicketsGreed(
                 routeRequest.getStartDate(),
                 routeRequest.getStationsToVisit(),
                 routeRequest.getTransportTypes(),
@@ -55,7 +83,7 @@ public class RouteService {
             List<StationInRoute> leftStations = routeRequest.getStationsToVisit()
                 .subList(routeRequest.getTickets().size(), routeRequest.getStationsToVisit().size());
 
-            routeRequest.getTickets().addAll(getTickets(
+            routeRequest.getTickets().addAll(getTicketsGreed(
                 currentDate,
                 leftStations,
                 routeRequest.getTransportTypes(),
@@ -64,7 +92,23 @@ public class RouteService {
         }
     }
 
-    private List<StationInRoute> getStationOrder(Integer startStation, List<StationInRoute> stations) {
+    private List<StationInRoute> getStationOrderGreed(Integer startStation, List<StationInRoute> stations) {
+        List<StationInRoute> result = new ArrayList<>();
+        List<Integer> visited = new ArrayList<>();
+
+        result.add(new StationInRoute(startStation, 0));
+        int curSt = startStation;
+        for (int i = 0; i < stations.size(); i++) {
+            curSt = stationService.getClosetStation(curSt, stations, visited);
+            result.add(new StationInRoute(curSt, 0));
+            visited.add(curSt);
+        }
+        result.add(new StationInRoute(startStation, 0));
+
+        return result;
+    }
+
+    private List<StationInRoute> getStationOrderAnt(Integer startStation, List<StationInRoute> stations) {
         List<Integer> allStations = stations.stream()
             .map(StationInRoute::getStationId)
             .collect(Collectors.toList());
@@ -79,8 +123,6 @@ public class RouteService {
 
         result.add(new StationInRoute(startStation, 0));
         for (int i = 1; i < orderedStations.length; i++) {
-//            int finalI = i;
-//            result.add(stations.stream().filter(st -> st.getStationId() == finalOrderedStations[finalI]).findFirst().get());
             result.add(stations.get(finalOrderedStations[i]));
         }
         result.add(new StationInRoute(startStation, 0));
@@ -96,13 +138,13 @@ public class RouteService {
         return b;
     }
 
-    private List<Ticket> getTickets(Date startDate, List<StationInRoute> stations,
-                                    List<Integer> transportTypes, Double factor) {
+    private List<Ticket> getTicketsGreed(Date startDate, List<StationInRoute> stations,
+                                         List<Integer> transportTypes, Double factor) {
         List<Ticket> tickets = new ArrayList<>();
 
         Date currentDate = new Date(startDate.getTime());
         for (int i = 0; i < stations.size() - 1; i++) {
-            Ticket ticket = getTicket(stations.get(i).getStationId(), stations.get(i + 1).getStationId(), currentDate, transportTypes, factor);
+            Ticket ticket = getTicketGreed(stations.get(i).getStationId(), stations.get(i + 1).getStationId(), currentDate, transportTypes, factor);
             tickets.add(ticket);
             currentDate.setTime(ticket.getDepartureTime().getTime() + ticket.getDuration() + stations.get(i + 1).getHours() * MILLIS_IN_HOUR);
         }
@@ -110,7 +152,7 @@ public class RouteService {
         return tickets;
     }
 
-    private Ticket getTicket(int stationFrom, int stationTo, Date date, List<Integer> transportTypes, Double factor) {
+    private Ticket getTicketGreed(int stationFrom, int stationTo, Date date, List<Integer> transportTypes, Double factor) {
         List<Ticket> allTickets = ticketService.getTicketsBeetwenStations(stationFrom, stationTo, date, new Date(date.getTime() + MILLIS_IN_DAY));
 
         if (allTickets.isEmpty()) {

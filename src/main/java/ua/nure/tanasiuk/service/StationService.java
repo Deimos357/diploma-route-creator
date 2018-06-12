@@ -2,8 +2,10 @@ package ua.nure.tanasiuk.service;
 
 import org.springframework.stereotype.Service;
 import ua.nure.tanasiuk.dao.StationDao;
+import ua.nure.tanasiuk.dto.StationInRoute;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class StationService {
@@ -27,5 +29,19 @@ public class StationService {
         }
 
         return result;
+    }
+
+    public int getClosetStation(int curSt, List<StationInRoute> stations, List<Integer> visited) {
+        final double[] min = {Double.MAX_VALUE};
+        AtomicInteger result = new AtomicInteger(-1);
+
+        stations.stream().map(StationInRoute::getStationId).forEach(st -> {
+            if (distanceMatrix[curSt - 1][st - 1] < min[0] && !visited.contains(st)) {
+                min[0] = distanceMatrix[curSt - 1][st - 1];
+                result.set(st);
+            }
+        });
+
+        return result.get();
     }
 }
