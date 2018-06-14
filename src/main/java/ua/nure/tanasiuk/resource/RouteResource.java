@@ -5,6 +5,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ua.nure.tanasiuk.algorithm.AntColonyAlgorithm;
 import ua.nure.tanasiuk.dto.RouteRequest;
 import ua.nure.tanasiuk.model.Ticket;
 import ua.nure.tanasiuk.service.RouteService;
@@ -17,9 +18,11 @@ import java.util.List;
 @Validated
 public class RouteResource {
     private final RouteService routeService;
+    private final AntColonyAlgorithm antColonyAlgorithm;
 
-    public RouteResource(RouteService routeService) {
+    public RouteResource(RouteService routeService, AntColonyAlgorithm antColonyAlgorithm) {
         this.routeService = routeService;
+        this.antColonyAlgorithm = antColonyAlgorithm;
     }
 
     @ApiOperation("Get route")
@@ -40,5 +43,16 @@ public class RouteResource {
     @Authorization("Bearer")
     public ResponseEntity<List<Ticket>> editRoute(@RequestBody RouteRequest routeRequest) {
         return ResponseEntity.ok(routeService.editRoute(routeRequest));
+    }
+
+    @ApiOperation("")
+    @ApiResponses(value = {
+        @ApiResponse(code = 200, message = "sss")
+    })
+    @PostMapping("/seed")
+    @Authorization("Bearer")
+    public ResponseEntity setSeed(@RequestBody Long l) {
+        antColonyAlgorithm.seed = l;
+        return ResponseEntity.ok().build();
     }
 }

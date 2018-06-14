@@ -7,5 +7,6 @@
         select *
         from ticket
         where from_id = :stationFrom and to_id = :stationTo and :dateTo >= departure_time and departure_time >= :dateFrom
+        order by extract(epoch from (departure_time)) * 1000 + duration
     </entry>
 </properties>

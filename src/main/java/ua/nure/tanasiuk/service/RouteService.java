@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ua.nure.tanasiuk.dto.RouteRequest;
 import ua.nure.tanasiuk.dto.StationInRoute;
+import ua.nure.tanasiuk.model.DPResult;
 import ua.nure.tanasiuk.model.Ticket;
 import ua.nure.tanasiuk.algorithm.AntColonyAlgorithm;
 
@@ -29,35 +30,36 @@ public class RouteService {
     }
 
     public List<Ticket> getRoute(RouteRequest routeRequest) {
+        log.info("_____");
+        log.info("Size: " + routeRequest.getStationsToVisit().size());
+
         // debug
-        List<StationInRoute> gr = getStationOrderGreed(routeRequest.getStartStation(), routeRequest.getStationsToVisit());
-        List<Ticket> badTickets = getTicketsGreed(
-            routeRequest.getStartDate(),
-            gr,
-            routeRequest.getTransportTypes(),
-            routeRequest.getFactor()
-        );
+//        List<StationInRoute> gr = getStationOrderGreed(routeRequest.getStartStation(), routeRequest.getStationsToVisit());
+//        List<Ticket> badTickets = getTicketsGreed(
+//            routeRequest.getStartDate(),
+//            gr,
+//            routeRequest.getTransportTypes(),
+//            routeRequest.getFactor()
+//        );
+//        log.info("Greed:");
+//        log.info("Cost: " + badTickets.stream().map(Ticket::getCost).mapToDouble(Double::doubleValue).sum());
+//        log.info("Duration: " + badTickets.stream().map(Ticket::getDuration).mapToInt(Integer::intValue).sum());
+//        log.info("Rate: " + badTickets.stream().map(Ticket::getRate).mapToDouble(Double::doubleValue).sum());
+//        log.info(Arrays.toString(gr.stream().map(StationInRoute::getStationId).toArray()));
+//        log.info(Arrays.toString(badTickets.stream().map(Ticket::getFromId).toArray()));
 
         List<StationInRoute> ant = getStationOrderAnt(routeRequest.getStartStation(), routeRequest.getStationsToVisit());
-        List<Ticket> coolTickets = getTicketsGreed(
+        List<Ticket> coolTickets = getTicketsDP(
             routeRequest.getStartDate(),
             ant,
             routeRequest.getTransportTypes(),
             routeRequest.getFactor()
         );
 
-        log.info("_____");
-        log.info("Size: " + routeRequest.getStationsToVisit().size());
-
-        log.info("Greed:");
-        log.info("Cost: " + badTickets.stream().map(Ticket::getCost).mapToDouble(Double::doubleValue).sum());
-        log.info("Duration: " + badTickets.stream().map(Ticket::getDuration).mapToInt(Integer::intValue).sum());
-        log.info(Arrays.toString(gr.stream().map(StationInRoute::getStationId).toArray()));
-        log.info(Arrays.toString(badTickets.stream().map(Ticket::getFromId).toArray()));
-
         log.info("Ant: ");
         log.info("Cost: " + coolTickets.stream().map(Ticket::getCost).mapToDouble(Double::doubleValue).sum());
         log.info("Duration: " + coolTickets.stream().map(Ticket::getDuration).mapToInt(Integer::intValue).sum());
+        log.info("Rate: " + coolTickets.stream().map(Ticket::getRate).mapToDouble(Double::doubleValue).sum());
         log.info(Arrays.toString(ant.stream().map(StationInRoute::getStationId).toArray()));
         log.info(Arrays.toString(coolTickets.stream().map(Ticket::getFromId).toArray()));
         log.info("_____");
@@ -159,16 +161,127 @@ public class RouteService {
             return EMPTY_TICKET;
         }
 
-        Double costSum = allTickets.stream().mapToDouble(Ticket::getCost).sum();
-        Integer durationSum = allTickets.stream().mapToInt(Ticket::getDuration).sum();
-
-        allTickets.forEach(t -> {
-            double timeRate = (1.0 - (double)t.getDuration() / (double)durationSum) * (1.0 - factor);
-            double costRate = (1.0 - t.getCost() / costSum) * factor;
-            double transportRate = transportTypes.contains(t.getTransportTypeId()) ? 1 : 0;
-            t.setRate(costRate + timeRate + transportRate);
-        });
+        setRate(allTickets, transportTypes, factor);
 
         return allTickets.stream().max(Comparator.comparing(Ticket::getRate)).get();
+    }
+
+    private void setRate(List<Ticket> allTickets, List<Integer> transportTypes, Double factor) {
+//        Double costSum = allTickets.stream().mapToDouble(Ticket::getCost).sum();
+//        Integer durationSum = allTickets.stream().mapToInt(Ticket::getDuration).sum();
+
+//        allTickets.forEach(t -> {
+//            double timeRate = (1.0 - (double)t.getDuration() / (double)durationSum) * (1.0 - factor);
+//            double costRate = (1.0 - t.getCost() / costSum) * factor;
+//            double transportRate = transportTypes.contains(t.getTransportTypeId()) ? 1 : 0;
+//            t.setRate(costRate + timeRate + transportRate);
+//        });
+
+        allTickets.forEach(t -> {
+            double timeRate = (270450659.0 / (double)t.getDuration()) * (1.0 - factor);
+            double costRate = (1000.0 / t.getCost()) * factor;
+            double transportRate = transportTypes.contains(t.getTransportTypeId()) ? 500 : 0;
+            t.setRate(costRate + timeRate + transportRate);
+        });
+    }
+
+    private List<Ticket> getTicketsDP(Date startDate, List<StationInRoute> stations,
+                                      List<Integer> transportTypes, Double factor) {
+        DPResult[][] matrix = new DPResult[stations.size() * 100][stations.size()];
+        matrix[0][0] = DPResult.builder().rdyTime(startDate).value(0).build();
+
+        //log.info(0 + ": " + Arrays.toString(matrix[0]));
+
+        //log.info(0 + ": " + startDate);
+
+        List<Ticket> tickets = new ArrayList<>();
+        int i = 1;
+        for (int k = 1; k < stations.size(); k++) {
+            Date fromDate;
+            if (k == 1) {
+                fromDate = matrix[i - 1][k - 1].getRdyTime();
+            } else {
+                int l = i - 1;
+                while (matrix[l - 1][k - 1] != null) {
+                    l--;
+                }
+                fromDate = matrix[l][k - 1].getRdyTime();
+            }
+            Date toDate = new Date(matrix[i - 1][k - 1].getRdyTime().getTime() + MILLIS_IN_DAY);
+
+      //      log.info(k + ": " + fromDate + " - " + toDate);
+
+            List<Ticket> ttt = ticketService.getTicketsBeetwenStations(stations.get(k - 1).getStationId(),
+                stations.get(k).getStationId(), fromDate, toDate);
+            setRate(ttt, transportTypes, factor);
+            tickets.addAll(ttt);
+
+            while (i != tickets.size() + 1) {
+                Ticket t = tickets.get(i - 1);
+
+                matrix[i][0] = matrix[i - 1][0];
+                for (int j = 1; j < stations.size(); j++) {
+                    if (t.getToId() != stations.get(j).getStationId()) {
+                        matrix[i][j] =  matrix[i - 1][j];
+                    } else {
+                        int l = i - 1;
+                        while (matrix[l][j - 1].getRdyTime().after(t.getDepartureTime())) {
+                            l--;
+                        }
+
+                        if (matrix[i - 1][j] != null && (matrix[i - 1][j].getValue() > matrix[l][j - 1].getValue() + t.getRate())) {
+                            matrix[i][j] =  matrix[i - 1][j];
+                        } else {
+                            matrix[i][j] = DPResult.builder()
+                                .ticket(t)
+                                .parent(matrix[l][j - 1])
+                                .value(matrix[l][j - 1].getValue() + t.getRate())
+                                .rdyTime(new Date(t.getDepartureTime().getTime() + t.getDuration() + (stations.get(j).getHours() * MILLIS_IN_HOUR)))
+                                .build();
+                        }
+                    }
+                }
+
+                //log.info(i + ": " + Arrays.toString(matrix[i]));
+
+                i++;
+            }
+        }
+
+//        i--;
+//        int j = stations.size() - 1;
+//        List<Ticket> result = new ArrayList<>();
+//
+//        while (j != 0) {
+//            while (matrix[i-1][j] != null || matrix[i-1][j] == matrix[i][j]) {
+//                i--;
+//            }
+//
+//            Ticket t = tickets.get(i);
+//            result.add(t);
+//
+//            i--;
+//
+//            while (matrix[i][j - 1].getRdyTime().after(t.getDepartureTime())) {
+//                i--;
+//            }
+//
+//            j--;
+//        }
+//
+//        Collections.reverse(result);
+
+        List<Ticket> result = new ArrayList<>();
+
+        DPResult cur = matrix[i - 1][stations.size() - 1];
+
+        while (cur.getTicket() != null) {
+            result.add(cur.getTicket());
+            cur = cur.getParent();
+        }
+
+        Collections.reverse(result);
+
+        return result;
     }
 }

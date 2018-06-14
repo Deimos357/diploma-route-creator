@@ -10,6 +10,7 @@ import java.util.Random;
 @Slf4j
 public class AntColonyAlgorithm {
     private Random random = new Random();
+    public long seed = -1L;
 
 //    old
 //    private int alpha = 3;
@@ -23,9 +24,13 @@ public class AntColonyAlgorithm {
     private double Q = 1.0;
 
     private int numAnts = 10;
-    private int maxTime = 10000;
+    private int maxTime = 100000;
 
     public int[] makeRoute(double[][] distances) {
+//        if (seed != -1L) {
+//            random = new Random(seed);
+//        }
+
         int numCities = distances.length;
         int[][] ants = new int[numAnts][];
         int[] bestRoute = new int[numCities];
